@@ -1,9 +1,9 @@
 package com.whatsbehind.onlinechatclient.view;
 
-import com.whatsbehind.onlinechatclient.service.ChatService;
+import com.google.inject.Inject;
+import com.whatsbehind.onlinechatclient.client.OnlineChatClient;
+import com.whatsbehind.onlinechatclient.listener.ServerListenerManager;
 import com.whatsbehind.onlinechatclient.service.LoginService;
-import com.whatsbehind.onlinechatclient.thread_.ServerListener;
-import com.whatsbehind.onlinechatclient.thread_.ServerListenerManager;
 import com.whatsbehind.onlinechatcommon.model.user.User;
 import com.whatsbehind.onlinechatcommon.utility.Printer;
 import com.whatsbehind.onlinechatcommon.utility.Scanner_;
@@ -12,17 +12,24 @@ import lombok.NoArgsConstructor;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.List;
 
 @NoArgsConstructor
 public class LoginView {
 
     private final static int LOGIN_RETRY_LIMIT = 3;
-    private final LoginService loginService = new LoginService();
-    private final ChatService chatService = new ChatService();
+    private LoginService loginService;
+    private OnlineChatClient onlineChatClient;
     private User user;
-    private Socket socket;
+    private Socket listenerSocket;
 
-    public static void main(String[] args) throws IOException {
+    @Inject
+    public LoginView(LoginService loginService, OnlineChatClient onlineChatClient) {
+        this.loginService = loginService;
+        this.onlineChatClient = onlineChatClient;
+    }
+
+    public static void main(String[] args) {
         new LoginView().render();
     }
 
@@ -30,12 +37,14 @@ public class LoginView {
     private int loginRetryCount = 1;
 
     public void render() {
+        rendering = true;
         boolean login = login();
         if (!login) {
             System.out.println("Too many retries!");
             return;
         }
         Printer.print("User %s login successfully. Welcome to Online Chat system", user.getId());
+        Printer.functionDelimiter();
 
         while(rendering) {
             System.out.println("Online Chat system provides below functions: ");
@@ -48,19 +57,18 @@ public class LoginView {
                     Printer.functionDelimiter();
                     System.out.println("Pull online user list.");
                     pullOnlineUsers();
-                    break;
-                case "2":
                     Printer.functionDelimiter();
-                    chat();
                     break;
+//                case "2":
+//                    Printer.functionDelimiter();
+//                    chat();
+//                    break;
                 case "9":
                     Printer.functionDelimiter();
                     logoff();
                     System.out.println("You exited Online Chat system.");
                     rendering = false;
-                    break;
-                default:
-                    System.out.println("Wrong input. Please re-enter");
+                    Printer.functionDelimiter();
                     break;
             }
 
@@ -74,26 +82,26 @@ public class LoginView {
             final String userId = Scanner_.scanLine("\t\tYour name: ");
             final String password = Scanner_.scanLine("\t\tYour password: ");
             try {
-                socket = new Socket(InetAddress.getLocalHost(), 9999);
+                listenerSocket = new Socket(InetAddress.getLocalHost(), 9999);
             } catch (IOException e) {
                 Printer.print("User %s failed to connect to server.", userId);
                 continue;
             }
             user = User.builder().id(userId).password(password).build();
             try {
-                login = loginService.login(socket, user);
-                ServerListenerManager.add(socket, user);
+                login = loginService.login(listenerSocket, user);
             } catch (IOException | ClassNotFoundException exception) {
                 exception.printStackTrace();
             }
             if (!login) {
                 try {
-                    socket.close();
+                    listenerSocket.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
                 Printer.print("User %s failed to login.", userId);
             } else {
+                ServerListenerManager.add(listenerSocket, user);
                 break;
             }
         }
@@ -101,38 +109,27 @@ public class LoginView {
     }
 
     private void logoff() {
+        boolean logoff = false;
         try {
-            loginService.logoff(socket, user);
-            ServerListener serverListener = ServerListenerManager.get(user);
-            ServerListenerManager.remove(user);
-            serverListener.interrupt();
-
+            logoff = onlineChatClient.logoff(user);
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
+        } finally {
+            if (!logoff) {
+                System.out.println("Failed to logoff");
+            }
         }
     }
 
     private void pullOnlineUsers() {
         try {
-            chatService.pullOnlineUsers(socket, user);
+            List<String> onlineUsers = onlineChatClient.pullOnlineUsers(user);
+            for (String user : onlineUsers) {
+                System.out.println(user);
+            }
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-
     }
 
-    private void chat() {
-        try {
-            chatService.pullOnlineUsers(socket, user);
-            String receiverId = Scanner_.scanLine("Enter the user you want to chat with: ");
-//            if (!users.contains(receiverId)) {
-//                Printer.print("User %s is not online!", receiverId);
-//                return;
-//            }
-            new ChatView(socket, user, receiverId).render();
-        } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-
-    }
 }

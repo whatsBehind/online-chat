@@ -1,6 +1,8 @@
 package com.whatsbehind.onlinechatclient.service;
 
 import com.google.gson.Gson;
+import com.google.inject.Inject;
+import com.whatsbehind.onlinechatclient.client.OnlineChatClient;
 import com.whatsbehind.onlinechatcommon.model.message.Message;
 import com.whatsbehind.onlinechatcommon.model.message.MessageSender;
 import com.whatsbehind.onlinechatcommon.model.message.MessageType;
@@ -12,12 +14,20 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Date;
+import java.util.List;
 
 @NoArgsConstructor
 public class ChatService {
-    private final Gson gson = new Gson();
+    private Gson gson;
+    private OnlineChatClient onlineChatClient;
     private ObjectOutputStream oos;
     private ObjectInputStream ois;
+
+    @Inject
+    public ChatService(Gson gson, OnlineChatClient onlineChatClient) {
+        this.gson = gson;
+        this.onlineChatClient = onlineChatClient;
+    }
 
     public void pullOnlineUsers(Socket socket, User user) throws IOException, ClassNotFoundException {
         Message request = Message.builder()
@@ -27,8 +37,10 @@ public class ChatService {
                 .timeStamp(new Date().toString()).build();
         oos = new ObjectOutputStream(socket.getOutputStream());
         oos.writeObject(request);
+    }
 
-
+    public List<String> pullOnlineUsers(User user) throws IOException, ClassNotFoundException {
+        return onlineChatClient.pullOnlineUsers(user);
     }
 
 //    public void printOnlineUser(Socket socket) {

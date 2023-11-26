@@ -8,6 +8,7 @@ public enum MessageType {
     LOGIN_FAILURE,
     LOGOFF_SUCCESS,
     LOGOFF_FAILURE,
-    CHAT
+    CHAT,
+    CONNECT,
     ;
 }

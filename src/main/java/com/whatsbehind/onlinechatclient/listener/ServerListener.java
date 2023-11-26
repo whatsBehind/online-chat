@@ -1,7 +1,6 @@
-package com.whatsbehind.onlinechatclient.thread_;
+package com.whatsbehind.onlinechatclient.listener;
 
 import com.google.gson.Gson;
-import com.whatsbehind.onlinechatclient.service.ChatService;
 import com.whatsbehind.onlinechatcommon.model.message.Message;
 import com.whatsbehind.onlinechatcommon.model.message.MessageType;
 import com.whatsbehind.onlinechatcommon.model.user.User;
@@ -10,12 +9,10 @@ import com.whatsbehind.onlinechatcommon.utility.Printer;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.Socket;
-import java.util.List;
 
 public class ServerListener extends Thread {
     private Socket socket;
     private User user;
-    private ChatService chatService = new ChatService();
     private boolean listening = true;
     private Gson gson = new Gson();
     public ServerListener(Socket socket, User user) {
@@ -32,8 +29,9 @@ public class ServerListener extends Thread {
                     case CHAT:
                         receiveMessage(response);
                         break;
-                    case ONLINE_USERS:
-                        printOnlineUsers(response);
+                    case USER_LOGOFF:
+                        logoff();
+                        break;
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -45,11 +43,10 @@ public class ServerListener extends Thread {
         Printer.print("Received message %s from user %s", message.getContent(), message.getSender());
     }
 
-    private void printOnlineUsers(Message response) {
-        List<String> users = gson.fromJson(response.getContent(), List.class);
-        System.out.println("Online users: ");
-        for (String user : users) {
-            System.out.println(user);
-        }
+    private void logoff() throws IOException {
+        socket.close();
+        ServerListenerManager.remove(user);
+        listening = false;
+        Printer.print("Server Listener of user [%s] logoff", user.getId());
     }
 }

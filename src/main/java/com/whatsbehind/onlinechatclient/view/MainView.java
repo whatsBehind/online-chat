@@ -1,17 +1,26 @@
 package com.whatsbehind.onlinechatclient.view;
 
+import com.google.inject.Guice;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.whatsbehind.onlinechatclient.guice.ViewModule;
 import com.whatsbehind.onlinechatcommon.utility.Scanner_;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.io.IOException;
 
-@NoArgsConstructor
 @Setter
 public class MainView {
 
     public static void main(String[] args) throws IOException {
-        new MainView().render();
+        Injector injector = Guice.createInjector(new ViewModule());
+        injector.getInstance(MainView.class).render();
+    }
+
+    private LoginView loginView;
+    @Inject
+    public MainView(LoginView loginView) {
+        this.loginView = loginView;
     }
 
     private boolean rendering = true;
@@ -24,7 +33,7 @@ public class MainView {
             final String key = Scanner_.scanLine("Please select one function: ");
             switch(key) {
                 case "1":
-                    new LoginView().render();
+                    loginView.render();
                     break;
                 case "9":
                     System.out.println("You exited Online Chat system.");
