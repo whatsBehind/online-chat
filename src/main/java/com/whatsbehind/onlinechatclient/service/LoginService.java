@@ -23,7 +23,6 @@ public class LoginService {
     public LoginService(Gson gson) {
         this.gson = gson;
     }
-
     public boolean login(Socket socket, User user) throws IOException, ClassNotFoundException {
         Message request = Message.builder()
                 .sender(user.getId())

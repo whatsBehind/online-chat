@@ -5,7 +5,6 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.whatsbehind.onlinechatclient.service.LoginService;
 
-
 public class ServiceModule extends AbstractModule {
     @Override
     protected void configure() {

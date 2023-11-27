@@ -29,6 +29,16 @@ public class MessagePublisher {
         Printer.print("Message Publisher of user [%s] logoff", user.getId());
     }
 
+    public void sendMessage(String sender, String content) throws IOException {
+        Message message = Message.builder()
+                .sender(sender)
+                .receiver(user.getId())
+                .content(content)
+                .type(MessageType.CHAT).build();
+        publish(message);
+        Printer.print("Chat message sent to user [%s]", user.getId());
+    }
+
     public void publish(Object o) throws IOException {
         oos = new ObjectOutputStream(socket.getOutputStream());
         oos.writeObject(o);

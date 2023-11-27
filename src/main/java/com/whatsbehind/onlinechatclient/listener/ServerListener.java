@@ -40,7 +40,7 @@ public class ServerListener extends Thread {
     }
 
     private void receiveMessage(Message message) {
-        Printer.print("Received message %s from user %s", message.getContent(), message.getSender());
+        Printer.print("\n[Chat] %s: %s", message.getSender(), message.getContent());
     }
 
     private void logoff() throws IOException {

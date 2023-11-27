@@ -59,10 +59,11 @@ public class LoginView {
                     pullOnlineUsers();
                     Printer.functionDelimiter();
                     break;
-//                case "2":
-//                    Printer.functionDelimiter();
-//                    chat();
-//                    break;
+                case "2":
+                    Printer.functionDelimiter();
+                    chat();
+                    Printer.functionDelimiter();
+                    break;
                 case "9":
                     Printer.functionDelimiter();
                     logoff();
@@ -132,4 +133,21 @@ public class LoginView {
         }
     }
 
+    private void chat() {
+        try {
+            System.out.println("Online users: ");
+            List<String> onlineUsers = onlineChatClient.pullOnlineUsers(user);
+            for (String user : onlineUsers) {
+                System.out.println(user);
+            }
+            final String receiver = Scanner_.scanLine("Please select who you want to chat with: ");
+            if (!onlineUsers.contains(receiver)) {
+                Printer.print("User [%s] is not online", receiver);
+            } else {
+                new ChatView(onlineChatClient, user, receiver).render();
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
 }

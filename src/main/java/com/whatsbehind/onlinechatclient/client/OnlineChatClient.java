@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.inject.Inject;
 import com.whatsbehind.onlinechatcommon.model.message.Message;
 import com.whatsbehind.onlinechatcommon.model.message.MessageType;
-import com.whatsbehind.onlinechatcommon.model.onlinechatservice.ConnectResponse;
+import com.whatsbehind.onlinechatcommon.model.onlinechatservice.BaseResponse;
 import com.whatsbehind.onlinechatcommon.model.user.User;
 import com.whatsbehind.onlinechatcommon.utility.Printer;
 
@@ -41,7 +41,7 @@ public class OnlineChatClient {
 
         ois = new ObjectInputStream(onlineChatServer.getInputStream());
         Message response = (Message) ois.readObject();
-        ConnectResponse connectResponse = gson.fromJson(response.getContent(), ConnectResponse.class);
+        BaseResponse connectResponse = gson.fromJson(response.getContent(), BaseResponse.class);
         if (!connectResponse.isSuccessful()) {
             System.out.println("Failed to build connection with Online Chat Server!");
             onlineChatServer.close();
@@ -91,6 +91,23 @@ public class OnlineChatClient {
             Printer.print("Online Chat Server of user [%s] closes", user.getId());
         }
         return logoff;
+    }
+
+    public BaseResponse sendMessage(User user, String receiver, String message) throws IOException, ClassNotFoundException {
+        if (onlineChatServer == null) {
+            if (!connect(user)) {
+                return BaseResponse.builder().successful(false).message("Server connection failed").build();
+            }
+        }
+
+        Message request = Message.builder()
+                .sender(user.getId())
+                .receiver(receiver)
+                .type(MessageType.CHAT)
+                .content(message).build();
+        sendRequest(request);
+        Message response = receiveResponse();
+        return gson.fromJson(response.getContent(), BaseResponse.class);
     }
 
     private void sendRequest(Message request) throws IOException {

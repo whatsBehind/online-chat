@@ -3,6 +3,7 @@ package com.whatsbehind.onlinechatserver.listener;
 import com.google.gson.Gson;
 import com.whatsbehind.onlinechatcommon.model.message.Message;
 import com.whatsbehind.onlinechatcommon.model.message.MessageType;
+import com.whatsbehind.onlinechatcommon.model.onlinechatservice.BaseResponse;
 import com.whatsbehind.onlinechatcommon.model.user.User;
 import com.whatsbehind.onlinechatcommon.utility.Printer;
 import com.whatsbehind.onlinechatserver.publisher.MessagePublisher;
@@ -44,9 +45,9 @@ public class ClientListener extends Thread {
                     case ONLINE_USERS:
                         returnOnlineUsers();
                         break;
-//                    case CHAT:
-//                        sendMessage(response);
-//                        break;
+                    case CHAT:
+                        sendMessage(response);
+                        break;
                 }
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -60,7 +61,7 @@ public class ClientListener extends Thread {
 
         Message response = Message.builder()
                 .type(MessageType.LOGOFF_SUCCESS).build();
-        sendMessage(response);
+        sendResponse(response);
 
         socket.close();
         ClientListenerManager.remove(user);
@@ -73,10 +74,31 @@ public class ClientListener extends Thread {
         Message response = Message.builder()
                 .type(MessageType.ONLINE_USERS)
                 .content(gson.toJson(onlineUsers)).build();
-        sendMessage(response);
+        sendResponse(response);
     }
 
-    private void sendMessage(Message message) throws IOException {
+    private void sendMessage(Message request) throws IOException {
+        String sender = request.getSender();
+        String receiver = request.getReceiver();
+        String content = request.getContent();
+
+        MessagePublisher publisher = MessagePublisherManager.get(receiver);
+        BaseResponse baseResponse = BaseResponse.builder().successful(false).build();
+        Message response = Message.builder()
+                .receiver(sender)
+                .type(MessageType.CHAT).build();
+        try {
+            publisher.sendMessage(sender, content);
+            baseResponse.setSuccessful(true);
+        } catch (IOException e) {
+            Printer.print("Failed to send message from [%s] to [%s]", user.getId(), receiver);
+        } finally {
+            response.setContent(gson.toJson(baseResponse));
+            sendResponse(response);
+        }
+    }
+
+    private void sendResponse(Message message) throws IOException {
         oos = new ObjectOutputStream(socket.getOutputStream());
         oos.writeObject(message);
     }
