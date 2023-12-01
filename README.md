@@ -4,7 +4,7 @@
 https://github.com/whatsBehind/online-chat/assets/148703191/24f2159a-8c5e-4a8c-9e7f-5b7cc28f36a0
 
 ## High Level Architecture
-This is an online chat system built with BIO (Blocking IO) Using Java. Each client has two socket connections with the server, one connection supports push mode and another one supports pull mode. 
+This is an online chat system built with BIO (Blocking IO) Using Java. Each client has two socket connections with the server, one connection supports message push mode and another one supports message pull mode. 
 
 The system now supports below features:
 - Login
@@ -53,8 +53,8 @@ public class ServerListener extends Thread {
 
 - Online Chat Client
 
-It's a client class containing another socket connecting with the server. It supports message pull mode, which is that client sends a request to server and receives a response from the server, and it's a synchronous request.
-It has two privates methods `sendRequest` and `receiveResponse` which are used to support communication with the server.
+It's a client class containing another socket connecting with the server. It supports message pull mode, which is that client sends a request to server and receives a response, and it's a synchronous request.
+It has two private methods `sendRequest` and `receiveResponse` which are used to support communication with the server.
 
 ``` Java
 public class OnlineChatClient {
@@ -78,7 +78,7 @@ public class OnlineChatClient {
 ### Server
 - Message Publisher
 
-The name of this component is descriptive. Its duty is to publish a message to a corresponding client and receive the response from the server. It works with `Server Listen` in clients to support message push mode. Each message publisher has a 1 to 1 relationship with the client. All message publishers are managed by `Message Publisher Manager`
+The name of this component is descriptive. Its duty is to publish a message to a corresponding client and receive the response from the server. It works with `Server Listener` in clients to support message push mode. Each message publisher has a 1 to 1 relationship with the client. All message publishers are managed by `Message Publisher Manager`
 
 ``` Java
 public class MessagePublisher {
@@ -126,11 +126,11 @@ public class MessagePublisherManager {
 
 - Client Listener
 
-It is similar with `Server Listen` in clients. It's a `Thread` subclass waiting for message from the server. The thread in the most time is blocked at line 
+It is similar to `Server Listener` in clients. It's a `Thread` subclass waiting for message from the server. The thread in the most time is blocked at line 
 ``` Java
 Message response = (Message) ois.readObject();
 ```
-Once messages sent to the socket's receive queue (`InputStream`), it reads the message and perform corresponding operation on it and return a response to clients.
+Once messages sent to the socket's receive queue (`InputStream`), it reads the message and performs corresponding operation and returns a response to the client.
 
 ``` Java
 public class ClientListener extends Thread {
@@ -162,7 +162,7 @@ public class ClientListener extends Thread {
 
 - Client Listener Manager
 
-It manages all client listens in a `Map`, supporting methods like `add`, `get` and `remove`.
+It manages all client listeners in a `Map`, supporting methods like `add`, `get` and `remove`.
 
 ``` Java
 public class ClientListenerManager {
@@ -201,7 +201,7 @@ public class ClientListenerManager {
 ### Login
 - Client creates a new `Socket` connecting to port `9999` in local host (Server and clients are in local host) by sending below message. 
     - Message type is `USER_LOGIN`
-    - Before sending the message, user need to enter user id and password
+    - Before sending the message, user needs to enter user id and password
     ``` Java
     Message request = Message.builder()
         .sender(user.getId())
@@ -214,11 +214,11 @@ public class ClientListenerManager {
 
 
 
-- Server receives the login message from client
-    - First server check database if the user enters valid user id and password (Not implemented)
-    - After id and password validation, server creates a new `MessagePublisher` and add it into `MessagePublisherManager`
+- Server receives the login message from the client
+    - First server checks database if the user enters valid user id and password (Not implemented)
+    - After id and password validations, server creates a new `MessagePublisher` and add it into `MessagePublisherManager`
     - In the end, server sends back a response to notify the client if login succeeds
-- Client receives response from server. If login succeeded, client start a new `ServerListener` which is a subclass of `Thread` to listen to message from server. The thread is blocked when there is not message from server. 
+- Client receives response from server. If login succeeded, client start a new `ServerListener` which is a subclass of `Thread` to listen to message from server. The thread is blocked when there is no messages from server. 
 ![login2](https://github.com/whatsBehind/online-chat/assets/148703191/0f297167-f541-483a-92fd-aa91afc7a809)
 
 
@@ -243,7 +243,7 @@ After above steps, a new socket connection between server and client is built, w
 
 ### GetOnlineUsers
 - Client sends a request to server
-- Server check `MessagePublisherManager`, get all online users' id
+- Server checks `MessagePublisherManager`, get all online users' id
 - Server sends a response back to client
 - Client renders online users' id in terminal
 
@@ -270,13 +270,13 @@ After above steps, a new socket connection between server and client is built, w
 - Server close the socket in the client listener, and remove the listener from listener manager
 - Server sends a request to client through message publisher
 - Client receives the request, close socket in the server listen
-- Client responds. Server receives the response from client. Then server close the socket in message publisher and remove message listener from listener manager
+- Client responds. Server receives the response from client. Then server closes the socket in message publisher and remove the message listener from listener manager
 
-After all aboves steps, all sockets are closed and each listen thread (`ServerListener` in the client and `ClientListener` in the server) is terminated.
+After all aboves steps, all sockets are closed and each listener thread (`ServerListener` in the client and `ClientListener` in the server) is terminated.
 
 ![logoff2](https://github.com/whatsBehind/online-chat/assets/148703191/7f6c278c-c686-4757-a32f-452b32e49d9d)
 
 
 ## To Be Improved
-- This system is built on BIO. In server and client sides, there is one thread blocked to listen to message sent to the input stream of the socket. Thread is expensive because of the memory it occupies and performance influence when CPU switching among different threads
-- Listener is a resource shared by two threads, main thread and the listener threads. Current code doesn't ensure thread safety. The quick fix is to expose `InputStream` and `OutputStream` of the socket from the listen, and main thread can only access the two streams by call the exposed methods. Also, the two methods should be synchronized.
+- This system is built on BIO. In server and client sides, there is one thread blocked to listen to messages sent to the input stream of the socket. Thread is expensive because of the memory it occupies and performance influence when CPU switching among different threads
+- Listener is a resource shared by two threads, main thread and the listener thread. Current code doesn't ensure thread safety. The quick fix is to expose `InputStream` and `OutputStream` of the socket from the listener, and main thread can only access the two streams by calling the exposed methods. Also, the two methods should be synchronized.
